@@ -39,3 +39,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+/src/generated/prisma
+
+# editor/agent skill mirrors (locally synced, not project source)
+/.agents
+/.claude
+/.windsurf
+skills-lock.json
