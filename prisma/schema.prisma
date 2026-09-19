@@ -1,0 +1,173 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------- Enums ----------
+
+enum Role {
+  USER
+  HMO_ADMIN
+  ADMIN
+}
+
+enum VerificationStatus {
+  UNVERIFIED
+  PENDING
+  VERIFIED
+}
+
+enum ReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ClaimStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// ---------- Auth.js required models ----------
+// https://authjs.dev/getting-started/adapters/prisma
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ---------- Product models ----------
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  role          Role      @default(USER)
+  createdAt     DateTime  @default(now())
+
+  accounts  Account[]
+  sessions  Session[]
+  reviews   Review[]
+  claims    HmoClaim[]
+  responses HmoResponse[]
+}
+
+model Hmo {
+  id                 String             @id @default(cuid())
+  name               String
+  slug               String             @unique
+  logo               String?
+  description        String
+  website            String
+  phone              String?
+  email              String?
+  verificationStatus VerificationStatus @default(UNVERIFIED)
+  createdAt          DateTime           @default(now())
+
+  plans    Plan[]
+  benefits Benefit[]
+  reviews  Review[]
+  claims   HmoClaim[]
+}
+
+model Plan {
+  id          String   @id @default(cuid())
+  hmoId       String
+  hmo         Hmo      @relation(fields: [hmoId], references: [id])
+  name        String
+  description String
+  price       Decimal?
+
+  benefits Benefit[]
+}
+
+model Benefit {
+  id       String  @id @default(cuid())
+  hmoId    String?
+  hmo      Hmo?    @relation(fields: [hmoId], references: [id])
+  planId   String?
+  plan     Plan?   @relation(fields: [planId], references: [id])
+  name     String
+  category String
+}
+
+model Review {
+  id                    String       @id @default(cuid())
+  hmoId                 String
+  hmo                   Hmo          @relation(fields: [hmoId], references: [id])
+  userId                String
+  user                  User         @relation(fields: [userId], references: [id])
+  rating                Int
+  title                 String
+  body                  String
+  experienceType        String
+  customerServiceRating Int
+  approvalRating        Int
+  hospitalRating        Int
+  medicationRating      Int
+  status                ReviewStatus @default(PENDING)
+  createdAt             DateTime     @default(now())
+
+  responses HmoResponse[]
+}
+
+model HmoClaim {
+  id        String      @id @default(cuid())
+  hmoId     String
+  hmo       Hmo         @relation(fields: [hmoId], references: [id])
+  userId    String
+  user      User        @relation(fields: [userId], references: [id])
+  status    ClaimStatus @default(PENDING)
+  createdAt DateTime    @default(now())
+}
+
+model HmoResponse {
+  id        String   @id @default(cuid())
+  reviewId  String
+  review    Review   @relation(fields: [reviewId], references: [id])
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  body      String
+  createdAt DateTime @default(now())
+}
